@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.ksp)
-    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -51,15 +50,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    // Firebase BOM - ensures all Firebase dependencies are compatible
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    
-    // Firebase dependencies (versions managed by BOM)
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-common-ktx")
     
     // Image loading and picking
     implementation("io.coil-kt:coil-compose:2.5.0")

@@ -5,9 +5,6 @@ import android.util.Log
 import com.example.realestateapp.data.RealEstateDatabase
 import com.example.realestateapp.data.entity.Property
 import com.example.realestateapp.data.repository.PropertyRepository
-import com.google.firebase.FirebaseApp
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,12 +16,6 @@ class RealEstateApplication : Application() {
     
     override fun onCreate() {
         super.onCreate()
-        
-        // Initialize Firebase
-        FirebaseApp.initializeApp(this)
-        
-        // Enable offline persistence for Firebase Realtime Database
-        Firebase.database.setPersistenceEnabled(true)
         
         // Seed dummy data if needed
         seedDummyDataIfNeeded()

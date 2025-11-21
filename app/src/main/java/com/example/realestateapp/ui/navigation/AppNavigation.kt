@@ -17,9 +17,12 @@ import com.example.realestateapp.ui.screens.ProfileScreen
 import com.example.realestateapp.ui.screens.PropertyDetailScreen
 import com.example.realestateapp.ui.screens.RegisterScreen
 import com.example.realestateapp.ui.screens.TransactionsScreen
+import com.example.realestateapp.ui.screens.ServicesScreen
+import com.example.realestateapp.ui.screens.ServiceDetailScreen
 import com.example.realestateapp.ui.viewmodel.PropertyViewModel
 import com.example.realestateapp.ui.viewmodel.TransactionViewModel
 import com.example.realestateapp.ui.viewmodel.UserViewModel
+import com.example.realestateapp.ui.viewmodel.ServiceViewModel
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -32,6 +35,10 @@ sealed class Screen(val route: String) {
     object MyProperties : Screen("my_properties")
     object Transactions : Screen("transactions")
     object Profile : Screen("profile")
+    object Services : Screen("services")
+    object ServiceDetail : Screen("service/{serviceId}") {
+        fun createRoute(serviceId: String) = "service/$serviceId"
+    }
 }
 
 @Composable
@@ -39,7 +46,8 @@ fun AppNavigation(
     navController: NavHostController,
     userViewModel: UserViewModel = viewModel(),
     propertyViewModel: PropertyViewModel = viewModel(),
-    transactionViewModel: TransactionViewModel = viewModel()
+    transactionViewModel: TransactionViewModel = viewModel(),
+    serviceViewModel: ServiceViewModel = viewModel()
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     
@@ -90,6 +98,9 @@ fun AppNavigation(
                 },
                 onTransactionsClick = {
                     navController.navigate(Screen.Transactions.route)
+                },
+                onServicesClick = {
+                    navController.navigate(Screen.Services.route)
                 },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
@@ -174,6 +185,42 @@ fun AppNavigation(
                 onBackClick = {
                     navController.popBackStack()
                 },
+                userViewModel = userViewModel
+            )
+        }
+        
+        composable(Screen.Services.route) {
+            ServicesScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onServiceClick = { serviceId ->
+                    navController.navigate(Screen.ServiceDetail.createRoute(serviceId))
+                },
+                serviceViewModel = serviceViewModel
+            )
+        }
+        
+        composable(
+            route = Screen.ServiceDetail.route,
+            arguments = listOf(
+                navArgument("serviceId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
+            ServiceDetailScreen(
+                serviceId = serviceId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onBookClick = {
+                    navController.navigate(Screen.Services.route) {
+                        popUpTo(Screen.Home.route)
+                    }
+                },
+                serviceViewModel = serviceViewModel,
                 userViewModel = userViewModel
             )
         }

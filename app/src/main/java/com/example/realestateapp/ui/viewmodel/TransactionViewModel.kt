@@ -9,7 +9,6 @@ import com.example.realestateapp.data.entity.Transaction
 import com.example.realestateapp.data.entity.TransactionStatus
 import com.example.realestateapp.data.repository.PropertyRepository
 import com.example.realestateapp.data.repository.TransactionRepository
-import com.example.realestateapp.data.repository.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +21,6 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     
     private val transactionRepository: TransactionRepository
     private val propertyRepository: PropertyRepository
-    private val firebaseRepository: FirebaseRepository
     
     private val _userTransactions = MutableStateFlow<List<Transaction>>(emptyList())
     val userTransactions: StateFlow<List<Transaction>> = _userTransactions.asStateFlow()
@@ -37,7 +35,6 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         val database = RealEstateDatabase.getDatabase(application)
         transactionRepository = TransactionRepository(database.transactionDao())
         propertyRepository = PropertyRepository(database.propertyDao())
-        firebaseRepository = FirebaseRepository()
     }
     
     fun createTransaction(property: Property, buyerId: String) {
@@ -59,9 +56,9 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                     return@launch
                 }
                 
-                // Double-check property availability from Firebase first
+                // Check property availability from local database
                 val currentProperty = withContext(Dispatchers.IO) {
-                    firebaseRepository.getProperty(property.id) ?: propertyRepository.getPropertyById(property.id)
+                    propertyRepository.getPropertyById(property.id)
                 }
                 
                 if (currentProperty == null) {
@@ -83,21 +80,15 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                     status = TransactionStatus.COMPLETED
                 )
                 
-                // Save transaction to Firebase first
-                val firebaseTransactionId = withContext(Dispatchers.IO) {
-                    firebaseRepository.saveTransaction(transaction)
-                }
-                
                 // Save to local database
                 val localTransactionId = withContext(Dispatchers.IO) {
                     transactionRepository.insertTransaction(transaction)
                 }
                 
-                // Update property status in both databases
+                // Update property status
                 val updatedProperty = currentProperty.copy(isSold = true)
                 
                 withContext(Dispatchers.IO) {
-                    firebaseRepository.updateProperty(updatedProperty)
                     propertyRepository.updateProperty(updatedProperty)
                 }
                 
@@ -113,33 +104,25 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     fun getUserTransactions(userId: String) {
         viewModelScope.launch {
             try {
-                // Load from Firebase with real-time updates
-                firebaseRepository.getTransactionsByUserFlow(userId).collectLatest { firebaseTransactions ->
-                    // Sync to local database
-                    withContext(Dispatchers.IO) {
-                        firebaseTransactions.forEach { transaction ->
-                            transactionRepository.insertTransaction(transaction)
-                        }
-                    }
-                    _userTransactions.value = firebaseTransactions
-                }
-            } catch (e: Exception) {
-                // Fallback to local database
+                // Load from local database
                 transactionRepository.getTransactionsByUser(userId).collectLatest { transactions ->
                     _userTransactions.value = transactions
                 }
+            } catch (e: Exception) {
+                _transactionError.value = "Failed to load transactions: ${e.message}"
             }
         }
     }
     
     fun updateTransactionStatus(transactionId: String, status: TransactionStatus) {
         viewModelScope.launch {
-            transactionRepository.updateTransactionStatus(transactionId, status)
-            
-            // If transaction is cancelled, update property status back to available
-            if (status == TransactionStatus.CANCELLED) {
-                val transaction = transactionRepository.getTransactionById(transactionId)
-                transaction?.let {
+            val transaction = transactionRepository.getTransactionById(transactionId)
+            transaction?.let {
+                val updatedTransaction = it.copy(status = status)
+                transactionRepository.updateTransactionStatus(updatedTransaction)
+                
+                // If transaction is cancelled, update property status back to available
+                if (status == TransactionStatus.CANCELLED) {
                     val property = propertyRepository.getPropertyById(it.propertyId)
                     property?.let { prop ->
                         val updatedProperty = prop.copy(isSold = false)
