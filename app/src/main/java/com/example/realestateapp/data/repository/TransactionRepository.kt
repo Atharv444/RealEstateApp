@@ -35,7 +35,7 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         return transactionDao.getTransactionsByStatus(status)
     }
     
-    suspend fun updateTransactionStatus(transactionId: String, status: TransactionStatus) {
-        transactionDao.updateTransactionStatus(transactionId, status)
+    suspend fun updateTransactionStatus(transaction: Transaction) {
+        transactionDao.updateTransactionStatus(transaction)
     }
 }

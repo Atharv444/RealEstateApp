@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.realestateapp.data.RealEstateDatabase
 import com.example.realestateapp.data.entity.User
 import com.example.realestateapp.data.repository.UserRepository
-import com.example.realestateapp.data.repository.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.launch
 class UserViewModel(application: Application) : AndroidViewModel(application) {
     
     private val repository: UserRepository
-    private val firebaseRepository: FirebaseRepository
     
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
@@ -32,40 +30,20 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     init {
         val database = RealEstateDatabase.getDatabase(application)
         repository = UserRepository(database.userDao())
-        firebaseRepository = FirebaseRepository()
     }
     
     fun login(username: String, password: String) {
         viewModelScope.launch {
             try {
-                // Try Firebase first
-                val firebaseUser = withContext(Dispatchers.IO) {
-                    firebaseRepository.loginUser(username, password)
+                val localUser = withContext(Dispatchers.IO) {
+                    repository.login(username, password)
                 }
                 
-                if (firebaseUser != null) {
-                    // Sync to local database
-                    withContext(Dispatchers.IO) {
-                        repository.insertUser(firebaseUser)
-                    }
-                    _currentUser.value = firebaseUser
+                if (localUser != null) {
+                    _currentUser.value = localUser
                     _loginError.value = null
                 } else {
-                    // Fallback to local database
-                    val localUser = withContext(Dispatchers.IO) {
-                        repository.login(username, password)
-                    }
-                    
-                    if (localUser != null) {
-                        // Sync to Firebase
-                        withContext(Dispatchers.IO) {
-                            firebaseRepository.saveUser(localUser)
-                        }
-                        _currentUser.value = localUser
-                        _loginError.value = null
-                    } else {
-                        _loginError.value = "Invalid username or password"
-                    }
+                    _loginError.value = "Invalid username or password"
                 }
             } catch (e: Exception) {
                 _loginError.value = "Login failed: ${e.message}"
@@ -78,7 +56,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 Log.d("UserViewModel", "Starting registration for username: $username")
                 
-                // Check local database for username (simpler check)
+                // Check local database for username
                 val localUserByUsername = withContext(Dispatchers.IO) {
                     try {
                         repository.getUserByUsername(username)
@@ -103,24 +81,12 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                     password = password
                 )
                 
-                // Save to local database first (this should always work)
+                // Save to local database
                 Log.d("UserViewModel", "Saving user to local database")
                 withContext(Dispatchers.IO) {
                     repository.insertUser(newUser)
                 }
                 Log.d("UserViewModel", "User saved to local database successfully")
-                
-                // Try to save to Firebase (but don't fail if this doesn't work)
-                try {
-                    Log.d("UserViewModel", "Attempting to save user to Firebase")
-                    withContext(Dispatchers.IO) {
-                        firebaseRepository.saveUser(newUser)
-                    }
-                    Log.d("UserViewModel", "User saved to Firebase successfully")
-                } catch (e: Exception) {
-                    Log.w("UserViewModel", "Firebase save failed: ${e.message}")
-                    // Firebase save failed, but that's okay - user is still registered locally
-                }
                 
                 // Registration successful
                 Log.d("UserViewModel", "Registration completed successfully")

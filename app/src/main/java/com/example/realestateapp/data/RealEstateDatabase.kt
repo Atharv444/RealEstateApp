@@ -4,22 +4,33 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.realestateapp.data.dao.PropertyDao
 import com.example.realestateapp.data.dao.TransactionDao
 import com.example.realestateapp.data.dao.UserDao
+import com.example.realestateapp.data.dao.ServiceDao
+import com.example.realestateapp.data.dao.ServiceBookingDao
+import com.example.realestateapp.data.dao.ServiceReviewDao
 import com.example.realestateapp.data.entity.Property
 import com.example.realestateapp.data.entity.Transaction
 import com.example.realestateapp.data.entity.User
+import com.example.realestateapp.data.entity.Service
+import com.example.realestateapp.data.entity.ServiceBooking
+import com.example.realestateapp.data.entity.ServiceReview
 
 @Database(
-    entities = [Property::class, User::class, Transaction::class],
-    version = 2,
+    entities = [Property::class, User::class, Transaction::class, Service::class, ServiceBooking::class, ServiceReview::class],
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class RealEstateDatabase : RoomDatabase() {
     abstract fun propertyDao(): PropertyDao
     abstract fun userDao(): UserDao
     abstract fun transactionDao(): TransactionDao
+    abstract fun serviceDao(): ServiceDao
+    abstract fun serviceBookingDao(): ServiceBookingDao
+    abstract fun serviceReviewDao(): ServiceReviewDao
 
     companion object {
         @Volatile

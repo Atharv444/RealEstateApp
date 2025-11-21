@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.realestateapp.data.RealEstateDatabase
 import com.example.realestateapp.data.entity.Property
 import com.example.realestateapp.data.repository.PropertyRepository
-import com.example.realestateapp.data.repository.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +19,6 @@ import kotlinx.coroutines.launch
 class PropertyViewModel(application: Application) : AndroidViewModel(application) {
     
     private val repository: PropertyRepository
-    private val firebaseRepository: FirebaseRepository
     
     private val _properties = MutableStateFlow<List<Property>>(emptyList())
     val properties: StateFlow<List<Property>> = _properties.asStateFlow()
@@ -34,7 +32,6 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     init {
         val database = RealEstateDatabase.getDatabase(application)
         repository = PropertyRepository(database.propertyDao())
-        firebaseRepository = FirebaseRepository()
         loadProperties()
     }
     
@@ -65,26 +62,12 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun getPropertyById(propertyId: String) {
         viewModelScope.launch {
             try {
-                // Try Firebase first
-                val firebaseProperty = withContext(Dispatchers.IO) {
-                    firebaseRepository.getProperty(propertyId)
-                }
-                
-                if (firebaseProperty != null) {
-                    _selectedProperty.value = firebaseProperty
-                } else {
-                    // Fallback to local database
-                    val localProperty = withContext(Dispatchers.IO) {
-                        repository.getPropertyById(propertyId)
-                    }
-                    _selectedProperty.value = localProperty
-                }
-            } catch (e: Exception) {
-                // Fallback to local database
                 val property = withContext(Dispatchers.IO) {
                     repository.getPropertyById(propertyId)
                 }
                 _selectedProperty.value = property
+            } catch (e: Exception) {
+                Log.e("PropertyViewModel", "Error loading property", e)
             }
         }
     }
@@ -92,24 +75,11 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun addProperty(property: Property) {
         viewModelScope.launch {
             try {
-                // Save to local database first (primary storage)
                 withContext(Dispatchers.IO) {
                     repository.insertProperty(property)
-                }
-                
-                // Optionally try to sync to Firebase in background
-                try {
-                    withContext(Dispatchers.IO) {
-                        firebaseRepository.saveProperty(property)
-                    }
-                } catch (e: Exception) {
-                    // Firebase sync failed, but that's okay - property is saved locally
                 }
             } catch (e: Exception) {
-                // Even if local save fails, try again
-                withContext(Dispatchers.IO) {
-                    repository.insertProperty(property)
-                }
+                Log.e("PropertyViewModel", "Error adding property", e)
             }
         }
     }
@@ -126,25 +96,13 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
                     finalProperty = property.copy(imageUrl = imageUri.toString())
                 }
                 
-                // Save to local database first (primary storage)
+                // Save to local database
                 withContext(Dispatchers.IO) {
                     repository.insertProperty(finalProperty)
                 }
                 
-                // Optionally try to sync to Firebase in background
-                try {
-                    withContext(Dispatchers.IO) {
-                        firebaseRepository.saveProperty(finalProperty)
-                    }
-                } catch (e: Exception) {
-                    // Firebase sync failed, but that's okay - property is saved locally
-                }
-                
             } catch (e: Exception) {
-                // Even if everything fails, try to save basic property
-                withContext(Dispatchers.IO) {
-                    repository.insertProperty(property)
-                }
+                Log.e("PropertyViewModel", "Error adding property with image", e)
             } finally {
                 _isUploadingImage.value = false
             }
@@ -154,20 +112,11 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun updateProperty(property: Property) {
         viewModelScope.launch {
             try {
-                // Update in Firebase first
-                val success = withContext(Dispatchers.IO) {
-                    firebaseRepository.updateProperty(property)
-                }
-                
-                // Always update local database
                 withContext(Dispatchers.IO) {
                     repository.updateProperty(property)
                 }
             } catch (e: Exception) {
-                // Fallback to local database only
-                withContext(Dispatchers.IO) {
-                    repository.updateProperty(property)
-                }
+                Log.e("PropertyViewModel", "Error updating property", e)
             }
         }
     }

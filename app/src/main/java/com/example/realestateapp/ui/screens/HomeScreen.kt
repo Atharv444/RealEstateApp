@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,6 +66,7 @@ fun HomeScreen(
     onAddPropertyClick: () -> Unit,
     onMyPropertiesClick: () -> Unit,
     onTransactionsClick: () -> Unit,
+    onServicesClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     propertyViewModel: PropertyViewModel,
@@ -118,6 +120,12 @@ fun HomeScreen(
                     onClick = onTransactionsClick,
                     icon = { Icon(Icons.Default.List, contentDescription = "Transactions") },
                     label = { Text("Transactions") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onServicesClick,
+                    icon = { Icon(Icons.Default.Build, contentDescription = "Services") },
+                    label = { Text("Services") }
                 )
             }
         },

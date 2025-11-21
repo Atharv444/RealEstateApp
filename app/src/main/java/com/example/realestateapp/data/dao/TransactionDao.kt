@@ -33,6 +33,6 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE status = :status")
     fun getTransactionsByStatus(status: TransactionStatus): Flow<List<Transaction>>
 
-    @Query("UPDATE transactions SET status = :status WHERE id = :transactionId")
-    suspend fun updateTransactionStatus(transactionId: String, status: TransactionStatus)
+    @Update
+    suspend fun updateTransactionStatus(transaction: Transaction)
 }
