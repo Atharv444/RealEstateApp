@@ -35,17 +35,25 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     fun login(username: String, password: String) {
         viewModelScope.launch {
             try {
+                Log.d("UserViewModel", "Attempting login for username: $username")
+                
                 val localUser = withContext(Dispatchers.IO) {
-                    repository.login(username, password)
+                    Log.d("UserViewModel", "Querying database for user: $username")
+                    val user = repository.login(username, password)
+                    Log.d("UserViewModel", "Query result: ${if (user != null) "User found" else "User not found"}")
+                    user
                 }
                 
                 if (localUser != null) {
+                    Log.d("UserViewModel", "Login successful for user: ${localUser.username}")
                     _currentUser.value = localUser
                     _loginError.value = null
                 } else {
+                    Log.w("UserViewModel", "Login failed: Invalid username or password")
                     _loginError.value = "Invalid username or password"
                 }
             } catch (e: Exception) {
+                Log.e("UserViewModel", "Login failed with exception", e)
                 _loginError.value = "Login failed: ${e.message}"
             }
         }
@@ -85,6 +93,15 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 Log.d("UserViewModel", "Saving user to local database")
                 withContext(Dispatchers.IO) {
                     repository.insertUser(newUser)
+                    Log.d("UserViewModel", "User inserted, ID: ${newUser.id}")
+                    
+                    // Verify the user was saved by retrieving it
+                    val savedUser = repository.getUserByUsername(username)
+                    if (savedUser != null) {
+                        Log.d("UserViewModel", "User verified in database: ${savedUser.username}")
+                    } else {
+                        Log.e("UserViewModel", "User NOT found in database after insert!")
+                    }
                 }
                 Log.d("UserViewModel", "User saved to local database successfully")
                 

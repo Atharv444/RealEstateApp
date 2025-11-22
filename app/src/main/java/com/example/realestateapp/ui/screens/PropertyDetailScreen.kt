@@ -18,8 +18,12 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,11 +46,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.realestateapp.data.entity.Property
 import com.example.realestateapp.data.entity.Transaction
 import com.example.realestateapp.ui.viewmodel.PropertyViewModel
 import com.example.realestateapp.ui.viewmodel.TransactionViewModel
 import com.example.realestateapp.ui.viewmodel.UserViewModel
+import com.example.realestateapp.ui.viewmodel.LocalityViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -60,12 +66,14 @@ fun PropertyDetailScreen(
     onBuyClick: () -> Unit,
     propertyViewModel: PropertyViewModel,
     transactionViewModel: TransactionViewModel,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    localityViewModel: LocalityViewModel
 ) {
     val selectedProperty by propertyViewModel.selectedProperty.collectAsState()
     val currentUser by userViewModel.currentUser.collectAsState()
     val transactionSuccess by transactionViewModel.transactionSuccess.collectAsState()
     val transactionError by transactionViewModel.transactionError.collectAsState()
+    val selectedLocality by localityViewModel.selectedLocality.collectAsState()
     
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -74,6 +82,15 @@ fun PropertyDetailScreen(
     
     LaunchedEffect(propertyId) {
         propertyViewModel.getPropertyById(propertyId)
+    }
+    
+    LaunchedEffect(selectedProperty) {
+        selectedProperty?.let { property ->
+            // Load locality data based on property's localityId
+            if (property.localityId.isNotEmpty()) {
+                localityViewModel.getLocalityByPropertyLocalityId(property.localityId)
+            }
+        }
     }
     
     LaunchedEffect(transactionSuccess) {
@@ -195,6 +212,99 @@ fun PropertyDetailScreen(
                     text = "${property.address}, ${property.city}, ${property.zipCode}",
                     style = MaterialTheme.typography.bodyLarge
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Locality Insights
+                Text(
+                    text = "Locality Insights",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                if (selectedLocality != null) {
+                    val locality = selectedLocality!!
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Header with name and verified badge
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = locality.name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "${locality.city}, ${locality.state}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                                
+                                if (locality.isVerified) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.primaryContainer)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Verified",
+                                            modifier = Modifier.height(12.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "Verified",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Ratings
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LocalityRatingRow(label = "Safety", rating = locality.safetyRating)
+                                LocalityRatingRow(label = "Transport", rating = locality.transportRating)
+                                LocalityRatingRow(label = "Schools", rating = locality.schoolsRating)
+                            }
+                            
+                            // Review count
+                            Text(
+                                text = "${locality.reviewCount} reviews",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Loading locality information...",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider()
@@ -389,6 +499,38 @@ fun PropertyDetailFeature(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+@Composable
+fun LocalityRatingRow(label: String, rating: Double) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 12.sp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(5) { index ->
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Star",
+                    modifier = Modifier.height(14.dp),
+                    tint = if (index < rating.toInt()) 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+            Text(
+                text = String.format("%.1f", rating),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

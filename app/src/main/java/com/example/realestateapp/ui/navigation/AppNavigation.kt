@@ -23,6 +23,7 @@ import com.example.realestateapp.ui.viewmodel.PropertyViewModel
 import com.example.realestateapp.ui.viewmodel.TransactionViewModel
 import com.example.realestateapp.ui.viewmodel.UserViewModel
 import com.example.realestateapp.ui.viewmodel.ServiceViewModel
+import com.example.realestateapp.ui.viewmodel.LocalityViewModel
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -47,7 +48,8 @@ fun AppNavigation(
     userViewModel: UserViewModel = viewModel(),
     propertyViewModel: PropertyViewModel = viewModel(),
     transactionViewModel: TransactionViewModel = viewModel(),
-    serviceViewModel: ServiceViewModel = viewModel()
+    serviceViewModel: ServiceViewModel = viewModel(),
+    localityViewModel: LocalityViewModel = viewModel()
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     
@@ -138,7 +140,8 @@ fun AppNavigation(
                 },
                 propertyViewModel = propertyViewModel,
                 transactionViewModel = transactionViewModel,
-                userViewModel = userViewModel
+                userViewModel = userViewModel,
+                localityViewModel = localityViewModel
             )
         }
         
