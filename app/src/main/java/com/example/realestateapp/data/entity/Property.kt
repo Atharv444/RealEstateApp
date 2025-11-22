@@ -21,7 +21,8 @@ data class Property(
     val sellerId: String = "",
     val isSold: Boolean = false,
     val datePosted: Long = System.currentTimeMillis(),
-    val localityId: String = ""
+    val localityId: String = "",
+    val country: String = ""
 ) {
     // No-argument constructor for Firebase
     constructor() : this(
@@ -39,6 +40,7 @@ data class Property(
         sellerId = "",
         isSold = false,
         datePosted = System.currentTimeMillis(),
-        localityId = ""
+        localityId = "",
+        country = ""
     )
 }

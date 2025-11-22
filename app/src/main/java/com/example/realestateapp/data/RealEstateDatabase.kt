@@ -49,7 +49,6 @@ abstract class RealEstateDatabase : RoomDatabase() {
                     RealEstateDatabase::class.java,
                     "real_estate_database"
                 )
-                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
